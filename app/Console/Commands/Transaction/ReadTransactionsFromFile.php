@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Artisan;
 
 class ReadTransactionsFromFile extends Command
 {
+    private CONST CURRENT_CENTURY = 20;
+
     /**
      * The name and signature of the console command.
      *
@@ -29,7 +31,9 @@ class ReadTransactionsFromFile extends Command
      */
     public function handle()
     {
-        $handle = fopen("storage/upload/MovimientosCuenta.Q43", "r");
+        $fileName = env('FILE_NAME');
+
+        $handle = fopen("storage/upload/" . $fileName, "r");
         if ($handle) {
             $lineNum = 0;
             $transaction = [];
@@ -46,19 +50,20 @@ class ReadTransactionsFromFile extends Command
                     $unitAmount = (int) substr($line, 28, 12);
                     $decimalAmount = (int) substr($line, 40, 2);
                     $amount = (float) (string) $unitAmount . '.' . $decimalAmount;
-                    $operationYear = 22 . (int) substr($line, 10, 2);
+                    $operationYear = sprintf("%d%d", self::CURRENT_CENTURY, (int)substr($line, 10, 2));
                     $operationMonth = substr($line, 12, 2);
                     $operationDay = substr($line, 14, 2);
 
                     $operationDate = Carbon::create($operationYear, $operationMonth, $operationDay);
 
-                    if ($isWithdrawal) {
-
+                    if ($isWithdrawal === 1) {
                         $transaction['amount'] = $amount;
                         $transaction['date'] = $operationDate->toDateTimeString();
                     }
 
                 } else {
+                    $line = mb_convert_encoding($line, "UTF-8");
+
                     $description = trim(substr($line, 4, 100));
 
                     $transaction['description'] = $description;
@@ -73,6 +78,7 @@ class ReadTransactionsFromFile extends Command
                             'description' => $transaction['description'],
                             '--date' => $transaction['date'],
                         ]);
+                        $this->info( $transaction['amount'] . ' '. $transaction['description'] . ' ' . $transaction['date'] . ' sending...');
                     }
 
                     $transaction = [];
@@ -80,6 +86,8 @@ class ReadTransactionsFromFile extends Command
             }
 
             fclose($handle);
-        };
+        }
+
+        return 0;
     }
 }
