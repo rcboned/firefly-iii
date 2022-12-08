@@ -38,7 +38,7 @@ class CreateTransactionFromRequest extends Command
         $email = $this->option('email') ?? env('USER_EMAIL');
         $bankName = $this->option('bankName') ?? env('BANK_ACCOUNT');
         $dateString = $this->option('date') ?? Carbon::now()->toDateTimeString();
-        $cashAccount = 'expense account';
+        $cashAccount = env('EXPENSE_ACCOUNT');
 
         $sourceAccount = Account::whereName($bankName)->first(); // where user where active
         $endAccount = Account::whereName($cashAccount)->first();
@@ -56,7 +56,12 @@ class CreateTransactionFromRequest extends Command
 
         $user = User::whereEmail($email)->first();
 
-        Auth::login($user, true);
+        $loggedUser = Auth::user();
+
+        // hack so we can send this command several times, we just login once
+        if ($loggedUser === null) {
+            Auth::login($user, true);
+        }
 
         $params = [
             'transactions' => [
