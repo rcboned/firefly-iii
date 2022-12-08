@@ -59,6 +59,11 @@ class ReadTransactionsFromFile extends Command
                     if ($isWithdrawal === 1) {
                         $transaction['amount'] = $amount;
                         $transaction['date'] = $operationDate->toDateTimeString();
+                        $transaction['type'] = 'withdrawal';
+                    } elseif ($isWithdrawal === 2){
+                        $transaction['amount'] = $amount;
+                        $transaction['date'] = $operationDate->toDateTimeString();
+                        $transaction['type'] = 'deposit';
                     }
 
                 } else {
@@ -73,12 +78,20 @@ class ReadTransactionsFromFile extends Command
                         isset($transaction['amount']) &&
                         isset($transaction['date'])
                     ) {
-                        Artisan::call('transaction:create:withdrawal', [
+                        Artisan::call('transaction:create', [
                             'amount' => $transaction['amount'],
                             'description' => $transaction['description'],
                             '--date' => $transaction['date'],
+                            '--type' => $transaction['type'],
                         ]);
-                        $this->info( $transaction['amount'] . ' '. $transaction['description'] . ' ' . $transaction['date'] . ' sending...');
+
+                        $this->info(
+                            $transaction['type'] . ' ' .
+                            $transaction['date'] .
+                            $transaction['amount'] . ' '.
+                            $transaction['description'] . ' ' .
+                            ' sending...'
+                        );
                     }
 
                     $transaction = [];

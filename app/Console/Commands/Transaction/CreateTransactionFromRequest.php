@@ -17,7 +17,7 @@ class CreateTransactionFromRequest extends Command
      *
      * @var string
      */
-    protected $signature = 'transaction:create:withdrawal {amount} {description} {--date=} {--email=} {--bankName=}';
+    protected $signature = 'transaction:create {amount} {description} {--date=} {--email=} {--type=withdrawal}';
 
     /**
      * The console command description.
@@ -36,14 +36,30 @@ class CreateTransactionFromRequest extends Command
         $amount = (float) $this->argument('amount');
         $transactionDescription = $this->argument('description');
         $email = $this->option('email') ?? env('USER_EMAIL');
-        $bankName = $this->option('bankName') ?? env('BANK_ACCOUNT');
         $dateString = $this->option('date') ?? Carbon::now()->toDateTimeString();
-        $cashAccount = env('EXPENSE_ACCOUNT');
-
-        $sourceAccount = Account::whereName($bankName)->first(); // where user where active
-        $endAccount = Account::whereName($cashAccount)->first();
-
         $date = Carbon::createFromFormat('Y-m-d H:i:s', $dateString);
+        $transactionType = (string) $this->option('type');
+
+        if (!in_array($transactionType, ['withdrawal', 'deposit'])) {
+            return 0;
+        }
+
+        $sourceAccountName = '';
+        $endAccountName = '';
+        if ($transactionType === 'withdrawal') {
+            $endAccountName = env('EXPENSE_ACCOUNT');
+            $sourceAccountName = env('BANK_ACCOUNT');
+        } elseif ($transactionType === 'deposit') {
+            $sourceAccountName =  env('REVENUE_ACCOUNT');
+            $endAccountName = env('BANK_ACCOUNT');
+        }
+
+        $sourceAccount = Account::whereName($sourceAccountName)->first(); // where user where active
+        $endAccount = Account::whereName($endAccountName)->first();
+
+        if (!$sourceAccount || !$endAccount) {
+            return 0;
+        }
 
         $transaction = $findTransaction->find($transactionDescription, $amount, $dateString);
 
@@ -66,7 +82,7 @@ class CreateTransactionFromRequest extends Command
         $params = [
             'transactions' => [
                 [
-                    "type" => 'withdrawal',
+                    "type" => $transactionType,
                     "date" => $date->format('Y-m-d'),
                     "amount" => sprintf("%.2f", $amount),
                     "description" => $transactionDescription,
