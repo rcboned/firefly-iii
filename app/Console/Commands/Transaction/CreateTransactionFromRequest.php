@@ -24,7 +24,7 @@ class CreateTransactionFromRequest extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Creates a transaction executing a request';
 
     /**
      * Execute the console command.

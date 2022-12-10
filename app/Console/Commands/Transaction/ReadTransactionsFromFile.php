@@ -22,7 +22,7 @@ class ReadTransactionsFromFile extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Reads Norma 43 file and creates transactions from it';
 
     /**
      * Execute the console command.

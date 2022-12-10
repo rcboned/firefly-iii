@@ -10,7 +10,6 @@ use FireflyIII\User;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 
 class ReplaceCreditCardExpenses extends Command
@@ -20,14 +19,14 @@ class ReplaceCreditCardExpenses extends Command
      *
      * @var string
      */
-    protected $signature = 'transaction:file:importCredit {filename}';
+    protected $signature = 'transaction:file:importCredit {filename} {--amountMargin=} {--showTransactions=}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Imports and replaces credit card by actual operations';
 
     /**
      * Execute the console command.
@@ -39,16 +38,33 @@ class ReplaceCreditCardExpenses extends Command
         $fileName = (string) $this->argument('filename');
         $email = env('USER_EMAIL');
 
+        $amountMargin = $this->option('amountMargin');
+        $showTransactions = $this->option('showTransactions');
+
         $transactionsArray = $this->getTransactionsFromFile($fileName);
 
         $total = $this->getTotalAmount($transactionsArray);
 
         $transactions = Transaction::whereHas('transactionJournal', function(Builder $query) {
             $query->where('description', 'like', '%visa%');
-        })->where('amount', $total)->get();
+        });
+
+        if ($amountMargin === null) {
+            $transactions = $transactions->where('amount', $total);
+        } else {
+            $amountMargin = (float) $amountMargin;
+
+            $transactions = $transactions->where('amount', '>', $total - $amountMargin)
+                ->where('amount', '<', $total + $amountMargin);
+        }
+
+        $transactions = $transactions->get();
 
         if (count($transactions) !== 1) {
             $this->error(count($transactions)  . ' records found');
+            if (!is_null($showTransactions)) {
+                dump($transactions->toArray());
+            }
 
             return 0;
         }
@@ -79,8 +95,6 @@ class ReplaceCreditCardExpenses extends Command
                 $transaction['amount'] = $transaction['amount'] * -1;
 
                 [$sourceAccount, $endAccount] = $this->getAccounts($transactionType);
-
-                //TODO check the operation already exists
 
                 $params = [
                     'transactions' => [
