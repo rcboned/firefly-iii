@@ -24,7 +24,7 @@ class CreateTransactionFromRequest extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Creates a transaction executing a request';
 
     /**
      * Execute the console command.
@@ -44,20 +44,14 @@ class CreateTransactionFromRequest extends Command
             return 0;
         }
 
-        $sourceAccountName = '';
-        $endAccountName = '';
-        if ($transactionType === 'withdrawal') {
-            $endAccountName = env('EXPENSE_ACCOUNT');
-            $sourceAccountName = env('BANK_ACCOUNT');
-        } elseif ($transactionType === 'deposit') {
-            $sourceAccountName =  env('REVENUE_ACCOUNT');
-            $endAccountName = env('BANK_ACCOUNT');
-        }
+        [$expenseAccountName, $sourceAccountName] = $this->getAccountNames($transactionType);
 
         $sourceAccount = Account::whereName($sourceAccountName)->first(); // where user where active
-        $endAccount = Account::whereName($endAccountName)->first();
+        $expenseAccount = Account::whereName($expenseAccountName)->first();
 
-        if (!$sourceAccount || !$endAccount) {
+        if (!$sourceAccount || !$expenseAccount) {
+            $this->info('Account not configured');
+
             return 0;
         }
 
@@ -70,14 +64,7 @@ class CreateTransactionFromRequest extends Command
             return 0;
         }
 
-        $user = User::whereEmail($email)->first();
-
-        $loggedUser = Auth::user();
-
-        // hack so we can send this command several times, we just login once
-        if ($loggedUser === null) {
-            Auth::login($user, true);
-        }
+        $this->authenticateUser($email);
 
         $params = [
             'transactions' => [
@@ -88,8 +75,8 @@ class CreateTransactionFromRequest extends Command
                     "description" => $transactionDescription,
                     "source_id" => (string) $sourceAccount->id,
                     "source_name" => $sourceAccount->name,
-                    "destination_id" =>  (string) $endAccount->id,
-                    "destination_name" => $endAccount->name,
+                    "destination_id" =>  (string) $expenseAccount->id,
+                    "destination_name" => $expenseAccount->name,
                     "category_name" => '',
                     "interest_date" => '',
                     "book_date" => '',
@@ -111,5 +98,32 @@ class CreateTransactionFromRequest extends Command
 //        $responseBody = json_decode($response->getContent(), true);
 
         return 0;
+    }
+
+    public function authenticateUser(mixed $email): void
+    {
+        $user = User::whereEmail($email)->first();
+
+        $loggedUser = Auth::user();
+
+        // hack so we can send this command several times, we just login once
+        if ($loggedUser === null) {
+            Auth::login($user, true);
+        }
+    }
+
+    private function getAccountNames(string $transactionType): array
+    {
+        $sourceAccountName = '';
+        $expenseAccountName = '';
+
+        if ($transactionType === 'withdrawal') {
+            $expenseAccountName = env('EXPENSE_ACCOUNT');
+            $sourceAccountName  = env('BANK_ACCOUNT');
+        } elseif ($transactionType === 'deposit') {
+            $sourceAccountName = env('REVENUE_ACCOUNT');
+            $expenseAccountName = env('BANK_ACCOUNT');
+        }
+        return [$expenseAccountName, $sourceAccountName];
     }
 }

@@ -10,11 +10,12 @@ final class FindTransaction
 {
     public function find($transactionDescription, $amount, $dateString): ?Transaction
     {
-        return Transaction::with('transactionJournal')
-            ->where('description', $transactionDescription)
+        return Transaction::withTrashed()
+            ->with('transactionJournal')
             ->where('amount', number_format($amount, 2) . '0000000000000000000000')
-            ->whereHas('transactionJournal', function($query) use ($dateString) {
+            ->whereHas('transactionJournal', function($query) use ($dateString, $transactionDescription) {
                 $query->where('date', $dateString);
+                $query->where('description', $transactionDescription);
             })
             ->first();
     }
