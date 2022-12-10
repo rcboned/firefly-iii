@@ -87,7 +87,7 @@ class ReadTransactionsFromFile extends Command
 
                         $this->info(
                             $transaction['type'] . ' ' .
-                            $transaction['date'] .
+                            $transaction['date'] . ' ' .
                             $transaction['amount'] . ' '.
                             $transaction['description'] . ' ' .
                             ' sending...'

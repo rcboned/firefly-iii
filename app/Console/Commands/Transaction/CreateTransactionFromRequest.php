@@ -70,14 +70,7 @@ class CreateTransactionFromRequest extends Command
             return 0;
         }
 
-        $user = User::whereEmail($email)->first();
-
-        $loggedUser = Auth::user();
-
-        // hack so we can send this command several times, we just login once
-        if ($loggedUser === null) {
-            Auth::login($user, true);
-        }
+        $this->authenticateUser($email);
 
         $params = [
             'transactions' => [
@@ -111,5 +104,17 @@ class CreateTransactionFromRequest extends Command
 //        $responseBody = json_decode($response->getContent(), true);
 
         return 0;
+    }
+
+    public function authenticateUser(mixed $email): void
+    {
+        $user = User::whereEmail($email)->first();
+
+        $loggedUser = Auth::user();
+
+        // hack so we can send this command several times, we just login once
+        if ($loggedUser === null) {
+            Auth::login($user, true);
+        }
     }
 }
