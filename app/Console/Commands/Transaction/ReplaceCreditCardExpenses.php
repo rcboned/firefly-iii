@@ -64,7 +64,7 @@ class ReplaceCreditCardExpenses extends Command
         $transactions = $transactions->get();
 
         if (count($transactions) !== 1) {
-            $this->error(count($transactions)  . ' records found');
+            $this->error(count($transactions)  . ' records found. Maybe you can try the showTransactions flag');
             if (!is_null($showTransactions)) {
                 dump($transactions->toArray());
             }
@@ -162,11 +162,14 @@ class ReplaceCreditCardExpenses extends Command
             while (($line = fgets($handle)) !== false) {
                 [$date, $time, $description, $city, $amount] = explode(';', $line);
 
+                $trimmed = trim($amount, '\"');
+                $trimmed = floatval(trim(str_replace(',', '.', $trimmed)));
+
                 $transactions[] = [
                     'date' => Carbon::createFromFormat('d/m/Y H:i', $date . ' ' . $time),
                     'description' => $description,
                     'city' => $city,
-                    'amount' => floatval(trim(str_replace(',', '.', $amount))),
+                    'amount' => $trimmed,
                 ];
             }
 
